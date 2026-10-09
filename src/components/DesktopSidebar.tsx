@@ -26,7 +26,7 @@ export function DesktopSidebar() {
           <span>Sua próxima oportunidade começa com organização.</span>
         </div>
         <Link className="sidebar-footer" to="/sobre">
-          <span className="flex items-center gap-2"><span className="status-dot" /> Em construção · Fase 1</span>
+          <span className="flex items-center gap-2"><span className="status-dot" /> Em construção · Fase 2</span>
           <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </div>

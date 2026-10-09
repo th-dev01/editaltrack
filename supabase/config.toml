@@ -1,0 +1,22 @@
+project_id = "xathrmzkbtvmxrcouptp"
+
+[functions.google-oauth-start]
+verify_jwt = true
+
+[functions.google-oauth-callback]
+verify_jwt = false
+
+[functions.google-connection-status]
+verify_jwt = true
+
+[functions.google-disconnect]
+verify_jwt = true
+
+[functions.google-calendar-sync-events]
+verify_jwt = true
+
+[functions.google-calendar-delete-event]
+verify_jwt = true
+
+[functions.google-calendar-mark-pending]
+verify_jwt = true

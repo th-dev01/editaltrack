@@ -1,147 +1,97 @@
 # EditalTrack
 
-Sistema web mobile-first para organizar editais, processos seletivos e oportunidades. Desenvolvimento incremental em 13 fases.
+Aplicação web responsiva para organizar editais e processos seletivos: editais, cronograma, documentos, dashboard, calendário interno, preferências e sincronização unidirecional de eventos com Google Calendar.
 
-## Estado atual: Fase 1
+## Funcionalidades
 
-Implementado: projeto React, TypeScript, Tailwind, tema escuro, fonte Nunito local, navegação responsiva, rotas e estrutura visual das telas. As funcionalidades futuras são identificadas pela fase prevista. Não há dados fictícios, persistência, autenticação, conexão com Supabase ou Google Calendar nesta versão.
+- Cadastro, confirmação de e-mail, login, recuperação de senha e logout via Supabase Auth.
+- CRUD de editais, eventos e documentos, protegidos por RLS por usuário.
+- Dashboard, calendário interno e preferências de timezone e reminders.
+- OAuth Google server-side e sincronização de eventos para Google Calendar.
 
-Veja [o relatório da Fase 1](docs/fase-1.md) para os resultados de validação e a lista completa de arquivos criados.
+O EditalTrack é a fonte de verdade. Mudanças feitas diretamente no Google Calendar não são importadas. Não há sincronização bidirecional, scraping, leitura automática de editais, push próprio ou PWA.
 
-## Executar
+## Stack e arquitetura
 
-Requer Node.js **22.13+** (recomendado: versão LTS atual) e npm.
+React 19, Vite 8, TypeScript, React Router, Tailwind CSS, Supabase JS, PostgreSQL/RLS e Supabase Edge Functions. Os testes E2E usam Playwright.
 
-```powershell
-cd "C:\Users\Notebook Gamer\OneDrive\Documentos\Projeto X\Org. Editais"
-npm install
-npm run dev
+```text
+React/Vite → Supabase Auth → PostgreSQL + RLS → Edge Functions → Google OAuth / Calendar
 ```
 
-Abra **http://localhost:5173**. A porta é fixa; se estiver ocupada, encerre o processo correspondente antes de executar novamente.
+O frontend usa apenas a URL Supabase e uma chave pública. Client secret, service role e tokens Google permanecem no backend. Veja [Fase 11: revisão de qualidade](docs/fase-11-quality.md).
 
-Para testar no celular, conecte-o à mesma rede do computador e abra `http://<IP-LOCAL-DO-COMPUTADOR>:5173`. Use o endereço Network exibido pelo Vite e libere o acesso na rede privada no firewall se necessário. `localhost` no celular aponta para o próprio celular.
+## Requisitos e execução local
 
-## Comandos de verificação
+Requer Node.js 22.13+ e npm.
+
+1. Crie `.env.local` na raiz com os valores públicos do projeto Supabase:
+
+   ```dotenv
+   VITE_SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<CHAVE_PUBLICA_ANON_OU_PUBLISHABLE>
+   ```
+
+2. Instale dependências e inicie Vite:
+
+   ```sh
+   npm ci
+   npm run dev
+   ```
+
+3. Acesse http://localhost:5173. Reinicie o Vite após mudar variáveis.
+
+Para testar OAuth Google com Supabase local, veja [OAuth da Fase 9](docs/fase-9-google-oauth.md). Não use service role no frontend nem em `VITE_*`.
+
+## Supabase e Google
+
+- Para Auth, configure Email, confirmação de e-mail, SMTP e URLs em Authentication → URL Configuration. Consulte o [guia de Supabase Auth](docs/supabase-auth-setup.md).
+- Para schema, aplique as migrations listadas em [deploy de produção](docs/production-deploy.md). Não crie policies permissivas para facilitar testes.
+- Para Google OAuth e Calendar API, configure credencial Web, origens, callback, secrets e Edge Functions conforme o [guia de produção](docs/production-deploy.md) e os detalhes das [Fases 9–10](docs/fase-9-google-oauth.md) / [Fase 10](docs/fase-10-google-calendar.md).
+
+### Variáveis
+
+Frontend/build (públicas):
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Edge Functions (somente backend):
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+- `APP_URL`
+- `TOKEN_ENCRYPTION_KEY`
+
+Nunca coloque no frontend `GOOGLE_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`, service role, refresh tokens ou access tokens. Não compartilhe nem versione arquivos `.env`.
+
+## Banco de dados e funções
+
+Ordem de migrations, comandos de conferência e deploy das sete funções estão em [`docs/production-deploy.md`](docs/production-deploy.md). O callback Google é a única Edge Function que não exige JWT no gateway; ele valida state de uso único no backend.
+
+## Comandos
 
 ```sh
 npm run typecheck
 npm run lint
 npm run build
+npm run test:auth
 npm run preview
 ```
 
-O build gera `dist/`. O preview fica em **http://localhost:4173**.
+O build de produção é gerado em `dist/`; o preview local usa http://localhost:4173. Os testes Playwright interceptam Supabase/Google e não usam credenciais reais. Para testes de integração real, use o [checklist final](docs/final-checklist.md).
 
-## Stack
+## Deploy
 
-- React 19 + React DOM
-- Vite 8 + TypeScript 5.9
-- React Router 7
-- Tailwind CSS 4 via plugin oficial do Vite
-- Lucide React
-- Nunito via `@fontsource/nunito` (sem requisições ao Google Fonts)
-- ESLint 10, TypeScript ESLint e regras de React Hooks
+Compatível com hospedagem estática, incluindo Vercel: configurar as duas variáveis `VITE_*` no ambiente de build, executar `npm ci` e `npm run build`, publicar `dist/` com HTTPS e habilitar fallback SPA para `/index.html`. Configurar domínio, Supabase, Google e OAuth está descrito em [`docs/production-deploy.md`](docs/production-deploy.md).
 
-TypeScript 5.9 foi escolhido por compatibilidade com a faixa suportada pelo TypeScript ESLint usado no projeto. O `package-lock.json` fixa as versões instaladas; use `npm ci` em CI/deploy.
+## Limitações e riscos conhecidos
 
-## Estrutura
+- Sincronização Google é EditalTrack → Google; edição remota não retorna ao sistema.
+- Dashboard agrega até 1.000 eventos/documentos no cliente, e pode buscar até 3.000 eventos antes do filtro.
+- Google OAuth em produção pode exigir publicação/verificação do consentimento conforme os scopes e as regras do Google. Isso não é automatizado.
+- O envio de e-mail precisa de SMTP de produção configurado no Supabase para entrega apropriada a usuários gerais.
+- Sem PWA, modo offline, scraping, leitura automática de edital, Gmail, Drive ou notificações próprias.
 
-```text
-public/
-  favicon.svg
-src/
-  components/     # Layout, navegação e elementos compartilhados
-  lib/            # Configuração da navegação
-  pages/          # Telas e estados iniciais
-  routes/         # Árvore de rotas
-  main.tsx
-  styles.css      # Tokens, Tailwind e estilos responsivos
-```
-
-As pastas `features`, `services`, `hooks` e `types` serão adicionadas quando houver funcionalidades que precisem delas. Acesso ao Supabase será centralizado em serviços nas próximas fases.
-
-## Rotas
-
-| Rota | Tela |
-| --- | --- |
-| `/` | Início / estrutura da dashboard |
-| `/editais` | Meus editais |
-| `/editais/novo` | Estrutura de novo edital |
-| `/editais/:id` | Estrutura de detalhes |
-| `/editais/:id/editar` | Estrutura de edição |
-| `/calendario` | Estrutura do calendário |
-| `/configuracoes` | Estrutura das configurações |
-| `/login` | Estrutura de login |
-| `/cadastro` | Estrutura de cadastro |
-| `/recuperar-senha` | Estrutura de recuperação |
-| `/sobre` | Etapas de desenvolvimento |
-| Outros endereços | Página não encontrada |
-
-As rotas são públicas nesta prévia. A proteção de rotas será adicionada junto do Supabase Auth na Fase 2, antes do CRUD de dados pessoais.
-
-## Interface e acessibilidade
-
-- Tema escuro centralizado em tokens no `src/styles.css`.
-- Layout mobile-first, menu inferior abaixo de 1024px e menu lateral no desktop.
-- Respeito à área segura inferior do celular e preferência por movimento reduzido.
-- Links e ações principais com área de toque de ao menos 44px.
-- Link para pular ao conteúdo, foco visível, marcos semânticos e foco no conteúdo após navegação.
-- Estados iniciais identificados como prévia, sem indicadores numéricos simulados.
-
-## Variáveis de ambiente e configurações externas
-
-**Nenhuma configuração externa é necessária para a Fase 1.** Não é necessário criar `.env` para executar esta versão. `.env.example` reserva somente as variáveis públicas futuras do Supabase.
-
-Variáveis `VITE_*` são públicas e entram no bundle do navegador. Nunca usá-las para senha, client secret, service role, refresh token ou outros segredos. Arquivos `.env` e `.env.*` estão ignorados, exceto `.env.example`.
-
-- **Fase 2:** criar projeto Supabase, configurar Auth e fornecer URL e chave pública. Instruções específicas serão adicionadas com a implementação.
-- **Fase 3 em diante:** migrations versionadas, RLS por usuário e, na Fase 6, buckets privados.
-- **Fases 10–11:** projeto Google Cloud, Calendar API e OAuth separado do login. Segredos e tokens serão exclusivamente server-side. A documentação com redirects exatos será escrita após a definição dos endpoints; o domínio de produção deverá ser informado pelo responsável pelo deploy.
-- **Fase 12:** manifest, service worker e instalação PWA. Esta fase inicial é uma aplicação web responsiva, ainda sem funcionamento offline ou instalação PWA.
-
-## Deploy desta fase
-
-1. Execute `npm ci` e `npm run build`.
-2. Publique o conteúdo de `dist/` em uma hospedagem estática, com HTTPS.
-3. Configure fallback de rotas da SPA para `/index.html`, preservando arquivos estáticos existentes. Isso é necessário para abrir diretamente `/editais` ou atualizar uma rota interna.
-4. O aplicativo está configurado para a raiz do domínio (`/`).
-
-Exemplo de regra Nginx para fallback: `try_files $uri $uri/ /index.html;`. Em outros provedores, utilize a configuração equivalente de rewrites da plataforma.
-
-Não há service worker nesta etapa: nenhum cache de dados, tokens ou APIs é implementado.
-
-## Roteiro
-
-1. **Base, layout, rotas, tema e responsividade — implementado.**
-2. Supabase, login, cadastro, recuperação, sessão e proteção de rotas.
-3. Banco, migrations, RLS e CRUD de editais.
-4. Eventos, cronograma, próximos prazos e urgência.
-5. Checklist e progresso de documentos.
-6. Storage privado, PDF e anexos.
-7. Dashboard com indicadores, busca e filtros.
-8. Calendário interno.
-9. Preferências de fuso horário e lembretes.
-10. OAuth Google, conexão e desconexão seguras.
-11. Google Calendar: sincronização, atualização e exclusão.
-12. PWA: manifest, service worker e instalação.
-13. Testes finais, revisão e documentação completa.
-
-## Fluxo de verificação visual
-
-1. Abra `/` no desktop: confira menu lateral, links e estado inicial.
-2. Reduza a largura para 390px e 320px: confira o menu inferior e ausência de rolagem horizontal.
-3. Navegue por Início → Editais → Novo → Calendário → Configurações.
-4. Abra `/login` → `/cadastro` → `/recuperar-senha` → início.
-5. Abra diretamente `/editais/exemplo` e `/editais/exemplo/editar`: devem exibir a estrutura, sem apresentar um edital fictício.
-6. Atualize uma rota interna e abra um endereço inexistente para verificar o fallback e a página 404.
-7. Navegue usando Tab/Enter e confira o link “Pular para o conteúdo”.
-
-## Problemas comuns
-
-- **Node incompatível:** atualize para Node 22.13+ ou uma LTS mais recente.
-- **Porta ocupada:** libere 5173 para desenvolvimento ou 4173 para preview.
-- **404 ao atualizar uma rota em produção:** configure o fallback da SPA na hospedagem.
-- **Cadastro não salva / login não disponível:** esta entrega é somente a Fase 1. Os formulários funcionais começam nas Fases 2 e 3.
-- **Celular não acessa:** verifique rede, IP local e firewall. Use o IP do computador, não `localhost`.
-# editaltrack
+Consulte [`docs/final-checklist.md`](docs/final-checklist.md) antes de liberar a produção. Uma tag `v1.0.0` pode ser criada pelo responsável após a aprovação do checklist; nenhuma tag/release é criada automaticamente.

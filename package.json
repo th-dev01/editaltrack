@@ -10,18 +10,25 @@
     "dev": "vite --host 0.0.0.0",
     "typecheck": "tsc -b",
     "lint": "eslint . --max-warnings 0",
+    "test:auth": "playwright test",
+    "auth:recovery-code": "node --env-file=.env.recovery.local scripts/dev-recovery-code.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
     "@fontsource/nunito": "^5.3.0",
+    "@hookform/resolvers": "^5.9.1",
+    "@supabase/supabase-js": "^2.117.2",
     "lucide-react": "^1.49.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-router-dom": "^7.18.4"
+    "react-hook-form": "^7.89.0",
+    "react-router-dom": "^7.18.4",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.0.0",
     "@types/react": "^19.3.0",

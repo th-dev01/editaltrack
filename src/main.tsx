@@ -8,6 +8,7 @@ import '@fontsource/nunito/latin-700.css'
 import '@fontsource/nunito/latin-800.css'
 import './styles.css'
 import { router } from './routes/router'
+import { AuthProvider } from './features/auth/AuthProvider'
 
 const root = document.getElementById('root')
 
@@ -15,6 +16,8 @@ if (!root) throw new Error('Elemento raiz não encontrado.')
 
 createRoot(root).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </StrictMode>,
 )
